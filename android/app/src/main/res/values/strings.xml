@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Lal Mohar</string>
+    
+    <!-- Facebook App ID from https://developers.facebook.com/ -->
+    <string name="facebook_app_id">254549470037711</string>
+    
+    <!-- Facebook Client Token from https://developers.facebook.com/ -->
+    <string name="facebook_client_token">5db900e9ff50e0ac61134034e9b656f3</string>
+    
+    <!-- Facebook Login Protocol Scheme (fb + your Facebook App ID) -->
+    <string name="fb_login_protocol_scheme">fb254549470037711</string>
+</resources>
