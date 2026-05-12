@@ -54,8 +54,15 @@ jobs:
 
       - name: Build Signed IPA
         run: |
-          # Replaced --no-codesign with the formal build compilation instruction
-          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+          # 1. Build an unsigned archive wrapper framework
+          flutter build ios --release --no-codesign
+          
+          # 2. Package and zip the payload into an IPA manually
+          mkdir -p build/ios/ipa/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -r app-release.ipa Payload
+
 
       - name: Upload Finished App Artifact
         uses: actions/upload-artifact@v4
