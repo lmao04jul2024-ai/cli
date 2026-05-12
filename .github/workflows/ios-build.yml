@@ -10,6 +10,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          name: ios-build
+          path: build/ios/iphoneos/Runner.app
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
