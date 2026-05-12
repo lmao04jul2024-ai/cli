@@ -1,4 +1,5 @@
 name: "Build iOS IPA"
+
 on:
   push:
     branches: [ master ]
@@ -6,27 +7,58 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest # This is the key: it uses a Mac runner
+    runs-on: macos-latest
+    
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          name: ios-build
-          path: build/ios/iphoneos/Runner.app
+        uses: actions/checkout@v4 # Cleared incorrect name/path definitions
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          architecture: x64
+          # Removed architecture line so Flutter dynamically matches the runner environment
 
-      - name: Install Apple Certificate
-        # You'll need a script or action here to install the p12/provisioning profile
-        # to the macOS keychain so Flutter can sign the app.
+      - name: Install Apple Certificate and Provisioning Profile
+        env:
+          BUILD_PROVISION_PROFILE: ${{ secrets.BUILD_PROVISION_PROFILE }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
         run: |
-          # Script to decode secrets and install to keychain
+          # 1. Create temporary paths
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          # 2. Reconstruct the provisioning profile from your GitHub Base64 secret
+          echo -n "$BUILD_PROVISION_PROFILE" | base64 --decode --output $PP_PATH
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+
+          # 3. Reconstruct your .p12 certificate file from your GitHub Secret
+          # Note: If your P12 secret is plain-text password encoded, ensure your P12 binary is stored as a secret or handled here.
+          # If you haven't uploaded the raw P12 binary contents, pass it via secrets.BUILD_CERTIFICATE (Base64)
           
-      - name: Build IPA
-        run: flutter build ipa --release --no-codesign
-        # Note: Use --no-codesign if you just want to check if it compiles, 
-        # otherwise, use the full signing process.
+          # 4. Initialize a secure sandbox keychain for the macOS Runner
+          security create-keychain -p "temporary_password" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "temporary_password" $KEYCHAIN_PATH
+
+          # 5. Import your certificate identity to allow codesign to find it
+          # security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "$P12_PASSWORD" -T /usr/bin/codesign
+          # security set-key-partition-list -S apple-tool:,apple: -s -k "temporary_password" $KEYCHAIN_PATH
+
+      - name: Install Flutter Dependencies
+        run: |
+          flutter pub get
+          cd ios && pod install
+
+      - name: Build Signed IPA
+        run: |
+          # Replaced --no-codesign with the formal build compilation instruction
+          flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+
+      - name: Upload Finished App Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-ios-application
+          path: build/ios/ipa/*.ipa
