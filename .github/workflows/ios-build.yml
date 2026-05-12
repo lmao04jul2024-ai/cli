@@ -1,0 +1,28 @@
+name: "Build iOS IPA"
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-latest # This is the key: it uses a Mac runner
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          architecture: x64
+
+      - name: Install Apple Certificate
+        # You'll need a script or action here to install the p12/provisioning profile
+        # to the macOS keychain so Flutter can sign the app.
+        run: |
+          # Script to decode secrets and install to keychain
+          
+      - name: Build IPA
+        run: flutter build ipa --release --no-codesign
+        # Note: Use --no-codesign if you just want to check if it compiles, 
+        # otherwise, use the full signing process.
